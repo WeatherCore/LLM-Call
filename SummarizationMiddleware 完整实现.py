@@ -32,6 +32,14 @@ def analyze_technology(tech_desc: str) -> str:
 
 tools = [search_patent, analyze_technology]
 
+model = init_chat_model(
+    model="qwen3.7-max",
+    model_provider="openai",
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+
+
 # ==================== 3. 定义上下文 ====================
 class UserContext(BaseModel):
     user_id: str = Field(..., description="用户唯一标识")
@@ -40,20 +48,13 @@ class UserContext(BaseModel):
 
 # ==================== 4. 配置中间件 ====================
 summarization_middleware = SummarizationMiddleware(
-    model=ChatDeepSeek(model="deepseek-chat", temperature=0.1),
+    model=model,
     # max_tokens_before_summary=200,          # 历史消息 token 数量超过 200 时触发压缩
     messages_to_keep=5,                     # 保留最近 5 条消息
     summary_prompt="请将以下对话历史进行摘要，保留关键决策点和技术细节：\n\n{messages}\n\n摘要:"   # 摘要提示词
 )
 
 # ==================== 5. 创建 Agent ====================
-model = init_chat_model(
-    model="qwen3.7-max",
-    model_provider="openai",
-    api_key=os.getenv("DASHSCOPE_API_KEY"),
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-)
-
 agent = create_agent(
     model=model,
     tools=tools,
