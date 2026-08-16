@@ -1,0 +1,48 @@
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage
+
+# 1. 定义 SystemMessage：设定 AI 的角色、任务和核心规则
+system_template = """
+你是一个专业的、知识渊博的AI助手。
+你的任务是基于**提供的上下文信息**来回答用户的问题。
+
+**核心规则：**
+1.  **仅基于上下文**：你的回答必须严格基于下面提供的"===上下文开始==="和"===上下文结束==="之间的信息[reference:3]。
+2.  **禁止臆测**：如果上下文信息不足以回答用户的问题，或者上下文中完全没有相关信息，请直接回答"根据目前提供的资料，我无法回答这个问题。" 不要编造或猜测答案[reference:4]。
+3.  **引用来源**：在回答中，如果引用了上下文中的具体信息，请简要说明信息来源（例如："根据文档所述..."）。
+4.  **保持专业与清晰**：用中文给出简洁、准确、有条理的回答。
+
+===上下文开始===
+{context}
+===上下文结束===
+"""
+
+# 2. 定义 HumanMessage 模板：接收用户问题
+human_template = "用户的问题是：{question}"
+
+# 3. 组合成类型安全的 ChatPromptTemplate
+prompt = ChatPromptTemplate.from_messages([
+    ("system", system_template),
+    ("human", human_template),
+])
+
+# --- 使用示例 ---
+# 假设这是从向量数据库检索到的相关文档内容
+retrieved_docs = """
+LangChain 是一个用于开发由语言模型驱动的应用程序的框架。
+它提供了提示词模板、消息类、检索器等核心组件。
+RAG（检索增强生成）是 LangChain 最流行的应用之一，它通过结合外部知识来增强 LLM 的生成能力。
+"""
+
+# 用户提出的问题
+user_query = "LangChain 是什么？它有什么主要应用？"
+
+# 格式化 Prompt
+final_prompt = prompt.invoke({
+    "context": retrieved_docs,
+    "question": user_query
+})
+
+# final_prompt 是一个包含 SystemMessage 和 HumanMessage 的 ChatPromptValue 对象
+# 你可以直接将其传递给 model.invoke()
+# response = model.invoke(final_prompt)

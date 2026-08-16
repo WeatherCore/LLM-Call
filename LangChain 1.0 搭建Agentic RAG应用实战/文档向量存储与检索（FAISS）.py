@@ -1,0 +1,45 @@
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import TextLoader, Docx2txtLoader
+from langchain_community.vectorstores import FAISS
+
+from langchain_community.embeddings.hunyuan import HunyuanEmbeddings
+from dotenv import load_dotenv
+import os
+
+# 加载.env环境变量
+load_dotenv(override=True)
+
+embeddings = HunyuanEmbeddings(
+    hunyuan_secret_id=os.environ["TENCENT_SECRET_ID"] ,
+    hunyuan_secret_key=os.environ["TENCENT_SECRET_KEY"],
+    region="ap-guangzhou" #必填，
+)
+
+# 读取基础数据文档
+loader = TextLoader(r"D:\VS Code-wenjian\大模型\LangChain 1.0 搭建Agentic RAG应用实战\sample_document.txt", encoding="utf-8")
+documents = loader.load()
+
+# 定义文档切分器
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,                # 切分文本块大小
+    chunk_overlap=50,              # 文本块重叠大小
+    separators=["\n\n", "\n", " ", ""] # 切分优先级符号
+)
+
+# 基础数据文档切分
+texts = text_splitter.split_documents(documents)
+
+# 根据切分好的文档块 + 嵌入模型，自动生成向量并构建索引
+vector_store = FAISS.from_documents(texts, embeddings)
+# 将向量索引持久化保存到本地文件夹 faiss_index
+vector_store.save_local("faiss_index")
+
+# 从磁盘加载向量库
+vector_store = FAISS.load_local(
+    "faiss_index",                # 文件夹名称
+    embeddings,                   # 必须传入和入库完全一致的Embedding模型
+    allow_dangerous_deserialization=True # ⚠️Windows必加，反序列化安全开关，否则抛异常
+)
